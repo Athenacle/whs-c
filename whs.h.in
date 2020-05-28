@@ -1,0 +1,893 @@
+#ifndef WHS_H
+#define WHS_H
+
+#cmakedefine ENABLE_LIBUV
+#cmakedefine ENABLE_EXCEPTIONS
+
+#ifdef ENABLE_EXCEPTIONS
+#define THROWS noexcept(false)
+#else
+#define THROWS noexcept
+#endif
+
+// clang-format off
+#define WHS_VERSION "@WHS_VERSION@"
+#define WHS_MAJOR_VERSION @MAJOR_VERSION@
+#define WHS_MINOR_VERSION @MINOR_VERSION@
+#define WHS_PATCH_VERSION @PATCH_VERSION@
+#define WHS_VERSION_HEX (WHS_MAJOR_VERSION << 24 | WHS_MINOR_VERSION << 8 | WHS_PATCH_VERSION)
+// clang-format on
+
+#include <functional>
+#include <type_traits>
+#include <map>
+#include <deque>
+#include <memory>
+
+#ifdef ENABLE_LIBUV
+struct uv_loop_s;
+struct uv_async_s;
+struct uv_tcp_s;
+struct uv_buf_t;
+struct uv_stream_s;
+#endif
+
+struct sockaddr_in;
+using Map = std::map<std::string, std::string>;
+
+namespace whs
+{
+    class HttpParser;
+    class TcpServer;
+    class Pipeline;
+    class Client;
+
+    namespace logger
+    {
+        class Logger
+        {
+        public:
+            virtual void info(const std::string &what) = 0;
+            virtual void error(const std::string &what) = 0;
+            virtual void warning(const std::string &what) = 0;
+            virtual void trace(const std::string &what) = 0;
+            virtual void debug(const std::string &what) = 0;
+            virtual ~Logger() {}
+        };
+        extern Logger *whsLogger;
+
+        template <class L, class... Args>
+        auto setLogger(const Args &&... args) -> typename std::
+            enable_if<std::is_base_of<Logger, L>::value && !std::is_abstract<L>::value, void>::type
+        {
+            if (whsLogger) {
+                delete whsLogger;
+            }
+            whsLogger = new L(std::forward<Args>(args)...);
+        }
+
+#define BUILD_LOGGER_FUNC(name)               \
+    inline void name(const std::string &what) \
+    {                                         \
+        if (whsLogger)                        \
+            whsLogger->name(what);            \
+    }
+        BUILD_LOGGER_FUNC(debug)
+        BUILD_LOGGER_FUNC(warning)
+        BUILD_LOGGER_FUNC(info)
+        BUILD_LOGGER_FUNC(error)
+        BUILD_LOGGER_FUNC(trace)
+#undef BUILD_LOGGER_FUNC
+    }  // namespace logger
+
+    namespace utils
+    {
+        class regex;
+        class mutex;
+
+        struct _base {
+        };
+
+        class noncopyable : _base
+        {
+        private:
+            noncopyable(const noncopyable &) = delete;
+            noncopyable &operator=(const noncopyable &) = delete;
+
+        protected:
+            constexpr noncopyable() = default;
+            ~noncopyable() = default;
+        };
+
+        enum class CommonHeader {
+            Host,
+            Connection,
+            CacheControl,
+            UserAgent,
+            Accept,
+            AcceptEncoding,
+            AcceptLanguage,
+            ContentEncoding,
+            ContentType,
+            ContentLength,
+            Date,
+            Expires,
+            Server,
+            XApiVersion,
+            XPoweredBy
+        };
+
+        const std::string &mapCommonHeader(CommonHeader);
+
+        inline Map *createMap()
+        {
+            return new Map;
+        }
+
+        inline void mapForEach(
+            const Map &m, const std::function<void(const std::string &, const std::string &)> &f)
+        {
+            for_each(m.cbegin(), m.cend(), [&f](auto &_pair) { f(_pair.first, _pair.second); });
+        }
+
+        bool splitURL(std::vector<std::string> &, const std::string &);
+    }  // namespace utils
+
+#ifdef ENABLE_EXCEPTIONS
+    class HttpException
+    {
+    protected:
+        int _httpMethod;
+        int _statusCode;
+        std ::string _what;
+
+    public:
+        HttpException(const std::string &_msg) : _what(_msg) {}
+
+        HttpException() : HttpException("HttpException") {}
+
+        int getStatusCode() const
+        {
+            return _statusCode;
+        }
+
+        virtual bool buildResponse(char *&, size_t &) const = 0;
+
+        virtual ~HttpException() {}
+    };
+#endif
+
+    class RestfulHttpRequest : private utils::noncopyable
+    {
+        friend HttpParser;
+
+        Map *_cookies;
+
+        // if we have a HTTP route as /usr/{name}/information
+        // then we get an request: GET /user/tj/information
+        // so, we have an param "name" = "tj"
+        Map *_params;
+
+        // queries: /index.html?first=a&second=b&third=c
+        Map *_queries;
+
+        const char *_body;
+
+        std::string _baseURL;
+
+        int _method;
+
+        unsigned int _bodySize;
+
+        Map _headers;
+
+    public:
+        RestfulHttpRequest();
+
+        RestfulHttpRequest(const RestfulHttpRequest &) = delete;
+
+        RestfulHttpRequest(RestfulHttpRequest &&);
+
+        ~RestfulHttpRequest();
+
+        void swap(RestfulHttpRequest &);
+
+        void foreachHeader(const std::function<void(const std::string &, const std::string &)> &f)
+        {
+            utils::mapForEach(_headers, f);
+        }
+
+        int getHeaderCount() const
+        {
+            return _headers.size();
+        }
+
+        bool getQuery(utils::CommonHeader h, std::string &v) const
+        {
+            return getQuery(utils::mapCommonHeader(h), v);
+        }
+
+        bool getQuery(const std::string &qname, std::string &out) const;
+
+        int getQueryCount() const;
+
+        void setMethod(int m)
+        {
+            _method = m;
+        }
+
+        int getMethod() const
+        {
+            return _method;
+        }
+
+        void emplaceQuery(std::string &&, std::string &&);
+
+        void setBody(char *buf, size_t size)
+        {
+            _bodySize = size;
+            _body = buf;
+        }
+
+        void setBaseURL(const std::string &url)
+        {
+            _baseURL = url;
+        }
+
+        const std::string &getBaseURL() const
+        {
+            return _baseURL;
+        }
+
+        void setBaseURL(std::string &&url)
+        {
+            _baseURL = url;
+        }
+
+        void emplaceHeader(std::string &&f, std::string &&v)
+        {
+            _headers.emplace(f, v);
+        }
+
+        void removeParam(std::string &&name);
+
+        size_t getParamsCount() const;
+
+        bool getParam(const std::string &p, std::string &v) const;
+
+        void paramsForEach(const std::function<void(const std::string &, const std::string &)> &f)
+        {
+            if (_params != nullptr)
+                utils::mapForEach(*_params, f);
+        }
+
+        void addParam(const std::string &name, const std::string &value);
+
+        bool getHeader(const std::string &h, std::string &v);
+    };
+
+    using Request = RestfulHttpRequest;
+
+#ifdef ENABLE_EXCEPTIONS
+    class HttpParserException : public HttpException
+    {
+        int _parserErrorCode;
+
+    public:
+        explicit HttpParserException(int _ec) : _parserErrorCode(_ec) {}
+        HttpParserException(int _ec, const std::string &_msg)
+            : HttpException(_msg), _parserErrorCode(_ec)
+        {
+        }
+
+        int getErrorCode() const
+        {
+            return _parserErrorCode;
+        }
+
+        virtual ~HttpParserException();
+
+        virtual bool buildResponse(char *&, size_t &) const override;
+    };
+#endif
+
+    class RestfulHttpResponse
+    {
+        const char *_body;
+
+        int _status;
+        unsigned int _bodySize;
+
+    public:
+        class HeaderName
+        {
+            HeaderName(const HeaderName &) = delete;
+            HeaderName &operator=(const HeaderName &) = delete;
+
+            union _Name {
+                std::string *hname;
+                utils::CommonHeader cheader;
+                _Name() {}
+                ~_Name() {}
+            };
+
+            enum class _Store { STRING, ENUM, NONE };
+
+            _Name name;
+            _Store store;
+
+        public:
+            size_t length() const
+            {
+                const std::string &str = *this;
+                return str.length();
+            }
+
+            const std::string &to_string() const
+            {
+                if (store == _Store::STRING) {
+                    return *name.hname;
+                } else {
+                    return utils::mapCommonHeader(name.cheader);
+                }
+            }
+
+            operator const std::string &() const
+            {
+                return to_string();
+            }
+
+            ~HeaderName()
+            {
+                if (store == _Store::STRING) {
+                    delete name.hname;
+                }
+            }
+
+            HeaderName(HeaderName &&h);
+
+            explicit HeaderName(utils::CommonHeader ch)
+            {
+                store = _Store::ENUM;
+                name.cheader = ch;
+            }
+
+            explicit HeaderName(std::string &&s)
+            {
+                name.hname = new std::string(s);
+                store = _Store::STRING;
+            }
+
+            explicit HeaderName(const std::string &s)
+            {
+                name.hname = new std::string(s);
+                store = _Store::STRING;
+            }
+
+            bool operator<(const HeaderName &h) const;
+
+            struct less {
+                bool operator()(const HeaderName &lhs, const HeaderName &rhs) const
+                {
+                    return lhs < rhs;
+                }
+            };
+        };
+
+        using ResponseHeaderMapType = std::map<HeaderName, std::string, HeaderName::less>;
+
+    private:
+        ResponseHeaderMapType _headers;
+
+        using pair = std::pair<std::string, std::string>;
+
+    public:
+        ~RestfulHttpResponse()
+        {
+            if (_body) {
+                delete[] _body;
+            }
+        }
+
+        RestfulHttpResponse()
+        {
+            _body = nullptr;
+            _bodySize = 0;
+            _status = 200;
+        }
+
+        void toBytes(char **ptr, size_t &size);
+
+        void addHeader(const std::string &field, const std::string &value)
+        {
+            _headers.emplace(field, value);
+        }
+
+        void addHeader(utils::CommonHeader h, const std::string &value)
+        {
+            _headers.emplace(h, value);
+        }
+
+        void status(int i)
+        {
+            _status = i;
+        }
+
+        std::string &operator[](utils::CommonHeader h)
+        {
+            HeaderName n(h);
+            return _headers[std::move(n)];
+        }
+
+        std::string &operator[](const std::string &f)
+        {
+            HeaderName n(f);
+            return _headers[std::move(n)];
+        }
+
+        void setBody(const char *buf, size_t size);
+
+        auto operator[](pair p)
+        {
+            HeaderName n(p.first);
+
+            return _headers.insert(std::make_pair(std::move(n), p.second));
+        }
+    };
+
+    using Request = RestfulHttpRequest;
+    using Response = RestfulHttpResponse;
+
+    // Middleware Object.
+    // all http requests will be push into a Middleware queue for processing
+    class Middleware
+    {
+        Middleware(const Middleware &) = delete;
+
+    public:
+        using MiddleFunction = std::function<bool(Request &, Response &)>;
+
+        virtual ~Middleware();
+        Middleware(Middleware &&);
+        Middleware() {}
+
+        // Middleware -> work as pipeline.
+        // if operator() return true, continuing pipline,
+        // otherwise, skip and go into error handle.
+        virtual bool operator()(Request &req, Response &resp) const THROWS = 0;
+    };
+
+    template <class T>
+    struct IsMiddleWare : public std::integral_constant<bool,
+                                                        std::is_base_of<Middleware, T>::value
+                                                            && !std::is_abstract<T>::value> {
+    };
+
+    template <class T, class V>
+    struct EnableIfMiddle : public std::enable_if<IsMiddleWare<T>::value, V> {
+    };
+
+    template <class M, class V = void>
+    using EnableIfMiddleType = typename EnableIfMiddle<M, V>::type;
+
+    using MiddlewarePointer = std::shared_ptr<Middleware>;
+
+    using std::is_abstract;
+    using std::is_base_of;
+
+    class Pipeline final
+    {
+        std::deque<MiddlewarePointer> _wares;
+
+    public:
+        Pipeline(const std::deque<MiddlewarePointer> &wares) : _wares(wares) {}
+        Pipeline(std::deque<MiddlewarePointer> &&wares) : _wares(wares) {}
+        Pipeline() {}
+
+        void addMiddleware(const MiddlewarePointer &p)
+        {
+            _wares.emplace_back(p);
+        }
+
+        void addMiddleware(MiddlewarePointer &&p)
+        {
+            _wares.emplace_back(p);
+        }
+
+        template <class T, class _ = EnableIfMiddleType<T>, class... Args>
+        void addMiddleware(Args &&... args)
+        {
+            MiddlewarePointer p(new T(std::forward<Args>(args)...));
+            _wares.emplace_back(p);
+        }
+
+        inline bool feed(Request &req, Response &res) const THROWS
+        {
+            bool ret = true;
+            for (auto &p : _wares) {
+                ret &= p->operator()(req, res);
+                if (!ret) {
+                    break;
+                }
+            }
+            return ret;
+        }
+    };
+
+    class MiddlewareWrapper : public Middleware
+    {
+        const MiddleFunction func;
+
+    public:
+        MiddlewareWrapper(const MiddleFunction &f) : func(f) {}
+
+        virtual ~MiddlewareWrapper();
+
+        virtual bool operator()(Request &req, Response &res) const THROWS override
+        {
+            return func(req, res);
+        }
+    };
+
+    class MiddlewareVectorWrapper : public Middleware
+    {
+        std::deque<MiddleFunction> _funcs;
+
+    public:
+        virtual ~MiddlewareVectorWrapper();
+
+        MiddlewareVectorWrapper(const std::deque<MiddleFunction> &ve);
+
+        virtual bool operator()(Request &req, Response &res) const THROWS override
+        {
+            bool ret = true;
+
+            for (auto &itor : _funcs) {
+                ret &= itor(req, res);
+                if (!ret) {
+                    break;
+                }
+            }
+            return ret;
+        }
+    };
+
+    namespace route
+    {
+#ifdef ENABLE_EXCEPTIONS
+        class NotFoundException : public HttpException
+        {
+            std::string _url;
+            const Request &_req;
+
+        public:
+            NotFoundException(const Request &, const std::string &);
+            virtual bool buildResponse(char *&, size_t &) const override;
+        };
+#endif
+
+
+        struct HttpRouteNode {
+            HttpRouteNode **_children;
+            int _childrenCount;
+
+            HttpRouteNode()
+            {
+                _children = nullptr;
+                _childrenCount = 0;
+            }
+            virtual const MiddlewarePointer &getRoute(Request &,
+                                                      const char *,
+                                                      const char *) const THROWS = 0;
+
+            virtual ~HttpRouteNode();
+        };
+
+        struct HttpRouteStringNode : public HttpRouteNode {
+            const std::string _nodeName;
+
+            HttpRouteStringNode(const std::string name) : _nodeName(name) {}
+            HttpRouteStringNode(const char *nn) : _nodeName(nn) {}
+
+            virtual ~HttpRouteStringNode();
+
+            virtual const MiddlewarePointer &getRoute(Request &,
+                                                      const char *,
+                                                      const char *) const THROWS override;
+        };
+        struct HttpRouteRootNode : public HttpRouteStringNode {
+            const MiddlewarePointer &GetRoute(Request &req, const std::string &url) const;
+
+            HttpRouteRootNode(const std::string & = std::string());
+
+            virtual const MiddlewarePointer &getRoute(Request &,
+                                                      const char *,
+                                                      const char *) const THROWS override;
+        };
+        class HttpRouter : public Middleware
+        {
+            using iterator = std::vector<std::string>::const_iterator;
+            using MP = MiddlewarePointer;
+
+            HttpRouteRootNode *start;
+
+            std::vector<MiddlewarePointer> middles;
+
+            bool GetRoute(Middleware &, Request &) const;
+
+        public:
+            struct HttpRouteBuilder {
+                using reference = HttpRouteBuilder &;
+                using vstring = std::vector<std::string>;
+                using dfunction = std::deque<Middleware::MiddleFunction>;
+                using mf = Middleware::MiddleFunction;
+
+            private:
+                enum class TreeNodeType {
+                    URL_STRING_SEGMENT,
+                    URL_QUERY_SEGMENT,
+                    URL_SEGMENT_END,
+                    URL_ROOT
+                };
+
+                struct TreeNode {
+                    TreeNodeType type;
+                    int method;
+                    std::string _myNodeName;
+                    std::string _pathToMe;
+                    std::vector<TreeNode *> _children;
+
+                    MiddlewarePointer func;
+
+                    ~TreeNode();
+
+                    bool operator==(const std::string &cmp);
+                };
+
+                TreeNode *root;
+
+                void insertChild(int, TreeNode *, iterator, iterator, std::shared_ptr<Middleware>);
+
+                template <int N>
+                using inc = std::integral_constant<int, N>;
+
+                template <class PathC, class FunctionC>
+                reference _use(int method, vstring &paths, dfunction &funcs)
+                {
+                    static_assert(PathC::value > 0, "use route with no PATH argument");
+                    static_assert(FunctionC::value > 0, "use route with no Middleware argument");
+
+                    MiddlewarePointer mp(nullptr);
+                    if (funcs.size() == 1) {
+                        mp.reset(new MiddlewareWrapper(funcs.front()));
+                    } else {
+                        mp.reset(new MiddlewareVectorWrapper(funcs));
+                    }
+                    middles.emplace_back(mp);
+
+                    for (const auto &p : paths) {
+                        vstring part;
+                        utils::splitURL(part, p);
+                        insertChild(method, root, part.cbegin(), part.cend(), mp);
+                    }
+                    return *this;
+                }
+
+                template <class PathC, class FunctionC>
+                reference _use(int method, vstring &paths, dfunction &funcs, const mf &&f)
+                {
+                    funcs.emplace_back(f);
+                    return _use<PathC, inc<FunctionC::value + 1>>(method, paths, funcs);
+                }
+
+                template <class PathC, class FunctionC, class... Args>
+                reference _use(
+                    int method, vstring &paths, dfunction &funcs, const mf &&f, Args &&... args)
+                {
+                    funcs.emplace_back(f);
+                    return _use<PathC, inc<FunctionC::value + 1>>(
+                        method, paths, funcs, std::forward<Args>(args)...);
+                }
+
+                template <class PathC, class FunctionC, class... Args>
+                reference _use(int method,
+                               vstring &paths,
+                               dfunction &funcs,
+                               const std::string &p,
+                               Args &&... args)
+                {
+                    static_assert(FunctionC::value == 0,
+                                  "get a 'path' (aka: std::string) after first 'middleware' (aka: "
+                                  "std::function...) seen. "
+                                  "Please check the argument after Nth ('integral_constant<int, "
+                                  "N>::value "
+                                  "== 0') function");
+                    paths.emplace_back(p);
+                    return _use<inc<PathC::value + 1>, FunctionC>(
+                        method, paths, funcs, std::forward<Args>(args)...);
+                }
+
+            public:
+                std::vector<MiddlewarePointer> middles;
+
+                template <int Method,
+                          class Middle,
+                          class _ = EnableIfMiddleType<Middle>,
+                          class... Args>
+                reference use(const std::string &path, Args &&... args)
+                {
+                    std::vector<std::string> paths;
+                    Middleware *ware = new Middle(std::forward<Args>(args)...);
+                    MiddlewarePointer p(ware);
+                    middles.emplace_back(p);
+                    utils::splitURL(paths, path);
+
+                    insertChild(Method, root, paths.cbegin(), paths.cend(), p);
+                    return *this;
+                }
+
+                template <class... Args>
+                reference use(int method, Args &&... args)
+                {
+                    std::vector<std::string> path;
+                    dfunction funcs;
+                    return _use<inc<0>, inc<0>>(method, path, funcs, std::forward<Args>(args)...);
+                }
+
+                template <int T, class... Args>
+                reference use(Args &&... args)
+                {
+                    static_assert(T >= 0 && T < 33, "T must less then 33");
+                    return use(T, std::forward<Args>(args)...);
+                }
+
+                reference withURLPrefix(const std::string &);
+
+                ~HttpRouteBuilder();
+
+                HttpRouteBuilder();
+
+                HttpRouteRootNode *build();
+
+                static void buildTreeNode(TreeNode *bnode, HttpRouteNode *rnode);
+            };
+
+            static const MP emptyMiddleware;
+
+            const MiddlewarePointer &GetRoute(Request &req, const std::string &url) const
+            {
+                return start->GetRoute(req, url);
+            }
+
+            virtual ~HttpRouter();
+
+            void swap(HttpRouter &);
+
+            HttpRouter();
+            HttpRouter(HttpRouter &&);
+            HttpRouter(HttpRouteBuilder &&b);
+            virtual bool operator()(Request &, Response &) const THROWS override;
+        };
+    }  // namespace route
+
+    class Whs
+    {
+        friend class Client;
+
+        Pipeline before;
+        route::HttpRouter route;
+        Pipeline after;
+
+        Middleware *notFound;  // 404
+#ifdef ENABLE_EXCEPTIONS
+        Middleware *systemError;  // 500
+#endif
+    protected:
+        Whs()
+            : notFound(nullptr)
+#ifdef ENABLE_EXCEPTIONS
+              ,
+              systemError(nullptr)
+#endif
+        {
+        }
+
+        Whs(route::HttpRouter &&router) : Whs()
+        {
+            route.swap(router);
+        }
+
+        void processing_request(Request &req, Response &resp);
+
+    protected:
+        virtual bool _start() = 0;
+
+    public:
+        virtual ~Whs()
+        {
+            if (notFound != nullptr)
+                delete notFound;
+#ifdef ENABLE_EXCEPTIONS
+            if (systemError != nullptr)
+                delete systemError;
+#endif
+        }
+
+        virtual bool stop() = 0;
+        virtual bool init() = 0;
+
+        bool start();
+
+        template <class T, class... Args>
+        auto setNotFoundHandler(Args &&... args) -> EnableIfMiddleType<T, void>
+        {
+            if (notFound != nullptr) {
+                delete notFound;
+            }
+            notFound = new T(std::forward<Args>(args)...);
+        }
+        virtual void write(Client *, char *, size_t) = 0;
+    };
+
+    class TcpWhs : public Whs
+    {
+        bool init_sock();
+
+    protected:
+        uint16_t _port;
+        std::string _host;
+        struct sockaddr_in *_sock;
+
+        virtual bool _setup() = 0;
+
+    public:
+        bool setup();
+
+        TcpWhs(route::HttpRouter &&router, std::string &host, uint16_t port)
+            : Whs(std::move(router)), _port(port), _host(host)
+        {
+            init_sock();
+        }
+
+        virtual ~TcpWhs() {}
+    };
+
+#ifdef ENABLE_LIBUV
+    namespace utils
+    {
+        void uvConnectCB(uv_stream_s *, int flag);
+
+        void uvAsyncStopCB(uv_async_s *);
+
+        void uvReadCB(uv_stream_s *, ssize_t, const uv_buf_t *);
+    }  // namespace utils
+
+    class LibuvWhs : public TcpWhs
+    {
+        friend void utils::uvAsyncStopCB(uv_async_s *);
+        friend void utils::uvConnectCB(uv_stream_s *, int);
+        friend void utils::uvReadCB(uv_stream_s *, ssize_t, const uv_buf_t *);
+
+        uv_loop_s *loop;
+        uv_async_s *stop_async;
+        uv_tcp_s *server;
+        utils::mutex *m;
+
+        virtual bool _setup() override;
+
+        void stop_uv();
+
+        virtual void write(Client *, char *, size_t) override;
+
+    public:
+        LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port);
+        virtual ~LibuvWhs();
+
+        virtual bool _start() override;
+        virtual bool stop() override;
+        virtual bool init() override;
+    };
+#endif
+}  // namespace whs
+
+#endif

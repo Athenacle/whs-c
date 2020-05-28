@@ -1,0 +1,12 @@
+#ifndef WHS_INTERNAL_CONFIG_H
+#define WHS_INTERNAL_CONFIG_H
+
+#cmakedefine UNIX_HAVE_GETOPTLONG
+
+#cmakedefine UNIX_HAVE_PTHREAD_MUTEX
+
+#cmakedefine HAVE_LIBPCRE2
+
+#cmakedefine HAVE_BZERO
+
+#endif
