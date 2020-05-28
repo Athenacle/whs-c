@@ -1,0 +1,13 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}/bin
+includedir=${prefix}/include
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+
+Name: lib@PROJECT_NAME@
+Description: An small Http Server
+URL: https://athenacle.xyz/whs
+Version: @WHS_VERSION@
+CFlags: -I${includedir} @PKG_CONFIG_DEFINES@
+Libs: -L${libdir} @THIRD_PARTY_LIBRARIES@
+Requires: @PKG_CONFIG_REQUIRES@ 
+
