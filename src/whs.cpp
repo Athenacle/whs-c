@@ -25,11 +25,15 @@ namespace
         {
             using std::to_string;
 
+            std::string now;
+            wu::format_time(now);
             static constexpr char server[] = "whs/" WHS_VERSION;
 
             res.addHeader(wu::CommonHeader::Server, server);
             res.addHeader(wu::CommonHeader::XPoweredBy, server);
-            res.addHeader(wu::CommonHeader::CacheControl, "no-store");
+
+            res.addHeaderIfNotExists(wu::CommonHeader::CacheControl, "no-store");
+            res.addHeader(wu::CommonHeader::Date, now);
             return true;
         }
     };
@@ -65,6 +69,25 @@ namespace
 #endif
 }  // namespace
 
+Whs::Whs()
+{
+    notFound = nullptr;
+#ifdef ENABLE_EXCEPTIONS
+    systemError = nullptr;
+#endif
+    staticFile = nullptr;
+}
+
+Whs::Whs(route::HttpRouter&& router) : Whs()
+{
+    route.swap(router);
+}
+
+whs::TcpWhs::~TcpWhs()
+{
+    delete _sock;
+}
+
 bool whs::TcpWhs::init_sock()
 {
     _sock = new sockaddr_in;
@@ -83,10 +106,12 @@ void Whs::processing_request(RestfulHttpRequest& req, RestfulHttpResponse& resp)
 {
 #ifdef ENABLE_EXCEPTIONS
     try {
-        before.feed(req, resp);
+        auto status = before.feed(req, resp);
 
         try {
-            route.operator()(req, resp);
+            if (status) {
+                route.operator()(req, resp);
+            }
         } catch (const route::NotFoundException& e) {
             notFound->operator()(req, resp);
         }
@@ -117,6 +142,10 @@ bool Whs::start()
 #ifdef ENABLE_EXCEPTIONS
     systemError = new SystemErrorHandler;
 #endif
+    if (staticFile != nullptr) {
+        before.addMiddleware(staticFile);
+        reinterpret_cast<StaticFileServer*>(staticFile.get())->start();
+    }
     if (logger::whsLogger != nullptr) {
         atexit([]() {
             if (logger::whsLogger) {
@@ -125,4 +154,11 @@ bool Whs::start()
         });
     }
     return _start();
+}
+
+bool Whs::enable_static_file(const std::string& prefix, const std::string& local)
+{
+    auto sf = new StaticFileServer(prefix, local);
+    this->staticFile.reset(sf);
+    return true;
 }

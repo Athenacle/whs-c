@@ -98,7 +98,9 @@ namespace whs::utils
 
 bool uv::_setup()
 {
-    loop = uv_default_loop();
+    if (!externalLoop) {
+        uv_loop_init(loop);
+    }
     int status = uv_tcp_init(loop, server);
     if (status != 0) {
         error(fmt::format("uv_tcp_init failed: {}", uv_strerror(status)));
@@ -138,13 +140,13 @@ bool uv::init()
 void uv::stop_uv()
 {
     m->lock();
-    uv_walk(
-        loop,
-        [](uv_handle_t *h, void *) {
-            //void *p = h->data;
-            uv_close((uv_handle_t *)h, nullptr);
-        },
-        nullptr);
+    uv_read_stop(reinterpret_cast<ust *>(server));
+    if (!externalLoop) {
+        uv_stop(loop);
+        uv_walk(
+            loop, [](uv_handle_t *h, void *) { uv_close((uv_handle_t *)h, nullptr); }, nullptr);
+        uv_loop_close(loop);
+    }
     m->unlock();
     info("whs: libuv backend stopped.");
 }
@@ -161,25 +163,36 @@ bool uv::_start()
     uv_run(loop, UV_RUN_DEFAULT);
     m->lock();
     m->unlock();
-    uv_loop_delete(loop);
+
     return true;
 }
 
-uv::LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port)
+uv::LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port, uv_loop_s *l)
     : TcpWhs(std::move(router), host, port)
 {
-    loop = new uv_loop_s;
+    loop = l;
     server = new uv_tcp_s;
     stop_async = new uv_async_t;
     stop_async->data = this;
     server->data = this;
     m = new utils::mutex;
+    externalLoop = true;
+}
+
+uv::LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port)
+    : LibuvWhs(std::move(router), std::move(host), port, new uv_loop_s)
+{
+    externalLoop = false;
 }
 
 uv::~LibuvWhs()
 {
     delete m;
     delete stop_async;
+    delete server;
+    if (!externalLoop) {
+        delete loop;
+    }
 }
 
 using thr = std::tuple<Client *, uv_buf_t *>;

@@ -6,7 +6,7 @@ set(WHSFSD_EXE whsfsd)
 
 set(MAJOR_VERSION 0)
 set(MINOR_VERSION 0)
-set(PATCH_VERSION 1)
+set(PATCH_VERSION 2)
 set(THIRD_PARTY_LIBRARIES)
 set(THIRD_PARTY_SOURCE)
 
@@ -23,13 +23,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 option(ENABLE_JSON "Enable Json Support" OFF)
 option(ENABLE_LIBUV "Enable Libuv Support" ON)
 option(ENABLE_WHSFSD "Enable main" ON)
-option(ENABLE_EXCEPTIONS "Enable C++ Exceptions" OFF)
+option(ENABLE_EXCEPTIONS "Enable C++ Exceptions" ON)
 option(ENABLE_TEST "Enable Tests" ON)
 option(ENABLE_DOC "Enable Documentation (need Doxygen)" OFF)
 
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party)
 file(MAKE_DIRECTORY ${THIRD_PARTY_DIR})
 
+find_package(OpenSSL REQUIRED)
 include(FindPkgConfig)
 include(FindThreads)
 include(ThirdParty)
@@ -97,11 +98,12 @@ if (${ENABLE_WHSFSD})
     add_dependencies(${WHSFSD_EXE} whs)
     target_link_libraries(
         ${WHSFSD_EXE}
-        whs_static
-        ${THIRD_PARTY_LIBRARIES}
-        ${TEST_LIBRARY}
-        ${HTTP_PARSER_LIBRARIES}
-        pthread)
+        PRIVATE whs_static
+                ${THIRD_PARTY_LIBRARIES}
+                ${TEST_LIBRARY}
+                ${HTTP_PARSER_LIBRARIES}
+                OpenSSL::Crypto
+                pthread)
 endif ()
 
 if (${ENABLE_TEST})

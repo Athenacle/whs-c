@@ -9,6 +9,11 @@
 #include <http_parser.h>
 #include <cstring>
 #include <cassert>
+#include <unordered_map>
+
+#ifndef UNIX_HAVE_PTHREAD_H
+#include <thread>
+#endif
 
 #ifdef HAVE_LIBPCRE2
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -59,6 +64,9 @@ namespace whs
             return s.find_first_of('{') == 0 && s.find_last_of('}') == s.length() - 1;
         }
 
+        void format_time(std::string &);
+        void format_time(const struct tm *tm, std::string &);
+
         bool parseParam(const std::string &, std::string &, regex &);
         bool parseQueryString(const std::string &, std::map<std::string, std::string> &);
 
@@ -69,6 +77,13 @@ namespace whs
             return ret;
         }
 
+#ifdef UNIX_HAVE_PTHREAD_H
+        class thread
+        {
+        };
+#else
+        using thread = std::thread;
+#endif
         /**
          * @brief mutex: mutex implementation.
          *
@@ -171,6 +186,45 @@ namespace whs
 
     }  // namespace utils
 
+    class StaticFileServer : public Middleware
+    {
+        static constexpr uint8_t MD5_DIGEST_LENGTH = 16;
+        static constexpr uint8_t ETAG_LENGTH = 32;
+        struct file {
+            static uint32_t major_time;
+            const char *mime;
+            uint32_t size;
+            uint32_t last_save_time;
+            char etag[ETAG_LENGTH + 1];
+
+            time_t get_save_time() const
+            {
+                time_t ret = major_time;
+                return ret << 32 | last_save_time;
+            }
+            file(const std::string &);
+            void calc_etag(const std::string &);
+        };
+        int fd;
+        utils::mutex m;
+
+        std::string path;
+        std::string prefix;
+        void start_thread();
+
+        void list_files();
+        std::unordered_map<uint64_t, file> files;
+
+    public:
+        StaticFileServer(StaticFileServer &&);
+        StaticFileServer(const std::string &, const std::string &);
+        virtual ~StaticFileServer();
+
+        bool start();
+        void stop();
+
+        virtual bool operator()(Request &, Response &) const THROWS override;
+    };
 }  // namespace whs
 
 #endif

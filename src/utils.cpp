@@ -262,7 +262,8 @@ const std::string &whs::utils::mapCommonHeader(CommonHeader h)
         _BuildHeaderString(Date),
         _BuildHeaderString(Server),
         _BuildHeaderString(Expires),
-
+        _BuildHeaderString(Etag),
+        _BuildHeader(LastModified, "Last-Modified"),
         _BuildHeader(AcceptEncoding, "Accept-Encoding"),
         _BuildHeader(AcceptLanguage, "Accept-Language"),
         _BuildHeader(ContentEncoding, "Content-Encoding"),

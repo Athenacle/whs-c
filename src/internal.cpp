@@ -44,19 +44,19 @@ whs::utils::mutex::mutex()
 
 whs::utils::mutex::~mutex()
 {
-    auto m = reinterpret_cast<mutex_raw_type*>(data);
+    auto m = reinterpret_cast<mutex_raw_type *>(data);
     delete m;
 }
 
 void whs::utils::mutex::lock()
 {
-    auto m = reinterpret_cast<mutex_raw_type*>(data);
+    auto m = reinterpret_cast<mutex_raw_type *>(data);
     m->lock();
 }
 
 void whs::utils::mutex::unlock()
 {
-    auto m = reinterpret_cast<mutex_raw_type*>(data);
+    auto m = reinterpret_cast<mutex_raw_type *>(data);
     m->unlock();
 }
 #endif
@@ -253,3 +253,28 @@ bool regex::match(const char *test) const
     return ret;
 }
 #endif
+
+void whs::utils::format_time(std::string &out)
+{
+    time_t now = time(nullptr);
+    auto t = gmtime(&now);
+    format_time(t, out);
+}
+
+void whs::utils::format_time(const struct tm *t, std::string &out)
+{
+    const char day_names[][4] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+    const char mon_names[][4] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+    // Date: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+    auto f = fmt::format("{}, {} {} {} {}:{}:{} GMT",
+                         day_names[t->tm_wday],
+                         t->tm_mday,
+                         mon_names[t->tm_mon],
+                         t->tm_year + 1900,
+                         t->tm_hour,
+                         t->tm_min,
+                         t->tm_sec);
+    out.swap(f);
+}
