@@ -5,6 +5,8 @@
 #define ENABLE_EXCEPTIONS
 #define THROWS noexcept(false)
 
+#cmakedefine HAVE_LIBPCRE2
+
 // clang-format off
 #define WHS_VERSION "@WHS_VERSION@"
 #define WHS_MAJOR_VERSION @MAJOR_VERSION@
@@ -17,6 +19,8 @@
 #include <type_traits>
 #include <map>
 #include <deque>
+#include <vector>
+#include <algorithm>
 #include <memory>
 
 #ifdef ENABLE_LIBUV
@@ -29,6 +33,15 @@ struct uv_stream_s;
 
 struct sockaddr_in;
 using Map = std::map<std::string, std::string>;
+
+#ifdef HAVE_LIBPCRE2
+#define PCRE2_CODE_UNIT_WIDTH 8
+struct pcre2_real_code_8;
+using regex_type = pcre2_real_code_8 *;
+#else
+#include <regex>
+using regex_type = std::regex;
+#endif
 
 namespace whs
 {
@@ -77,9 +90,6 @@ namespace whs
 
     namespace utils
     {
-        class regex;
-        class mutex;
-
         struct _base {
         };
 
@@ -93,6 +103,80 @@ namespace whs
             constexpr noncopyable() = default;
             ~noncopyable() = default;
         };
+
+        /**
+         * @brief regular expression type
+         * The regular expression grammar is PCRE2(https://www.pcre.org/)
+         */
+        class regex : noncopyable
+        {
+            regex_type re;
+#ifdef HAVE_LIBPCRE2
+
+            void init_pcre2();
+
+            uint32_t ob;
+            uint32_t nl;
+            const unsigned char *name_table;
+            uint32_t namecount;
+            uint32_t name_entry_size;
+#endif
+        public:
+            struct regex_group {
+                std::vector<std::string> matches;
+                std::map<std::string, std::string> named_matches;
+            };
+            using regex_group_match = std::vector<regex_group>;
+            /**
+             * @brief Construct a new EMPTY regex object
+             *
+             */
+            regex();
+
+            regex(regex &&);
+
+            ~regex();
+
+            void swap(regex &other);
+
+            bool match(const char *test) const;
+
+            bool match(const std::string &test) const
+            {
+                return match(test.c_str());
+            }
+
+            bool execute(const char *test, std::vector<regex_group> &group) const;
+
+            bool execute(const std::string &test, std::vector<regex_group> &group) const
+            {
+                return execute(test.c_str(), group);
+            }
+
+            /**
+             * @brief compile a string in to regex.
+             * As `regex::regex()' is private, user cannot construct a regex with pattern,
+             * using `compile' to construct it.
+             * @param pattern regular expression string
+             * @return regex*
+             * @retval NULL: compile failed.
+             * @retval otherwise: compile success.
+             */
+            static regex *compile(const char *pattern);
+
+            /**
+             * @brief compile a string in to regex.
+             * compile `pattern' and put it into `re'
+             * @param pattern regular expression string
+             * @param re output regex struct
+             * @return bool
+             * @retval true compile success.
+             * @retval false compile false.
+             */
+            static bool compile(const char *pattern, regex &re);
+        };
+
+        class mutex;
 
         enum class CommonHeader {
             Host,
@@ -707,8 +791,9 @@ namespace whs
         public:
             std::vector<MiddlewarePointer> middles;
 
-            template <int Method, class Middle, class _ = EnableIfMiddleType<Middle>, class... Args>
-            reference use(const std::string &path, Args &&... args)
+            template <int Method, class Middle, class... Args>
+            auto use(const std::string &path, Args &&... args)
+                -> EnableIfMiddleType<Middle, reference>
             {
                 std::vector<std::string> paths;
                 Middleware *ware = new Middle(std::forward<Args>(args)...);

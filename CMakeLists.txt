@@ -6,7 +6,7 @@ set(WHSFSD_EXE whsfsd)
 
 set(MAJOR_VERSION 0)
 set(MINOR_VERSION 0)
-set(PATCH_VERSION 2)
+set(PATCH_VERSION 3)
 set(THIRD_PARTY_LIBRARIES)
 set(THIRD_PARTY_SOURCE)
 
@@ -68,9 +68,10 @@ set_target_properties(whs_static PROPERTIES OUTPUT_NAME whs)
 target_link_libraries(whs ${HTTP_PARSER_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
 
 configure_file(${CMAKE_SOURCE_DIR}/whs.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/whs.h)
-configure_file(${CMAKE_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/config.h)
+configure_file(${CMAKE_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${PROJECT_NAME}.pc.in ${OUT_PATH}/${PROJECT_NAME}.pc @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(${CMAKE_BINARY_DIR})
 
 if (ENABLE_DOC)
     find_package(Doxygen OPTIONAL_COMPONENTS mscgen dia dot)
