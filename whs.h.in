@@ -782,20 +782,11 @@ namespace whs
 #ifdef ENABLE_EXCEPTIONS
         Middleware *systemError;  // 500
 #endif
-    protected:
-        Whs()
-            : notFound(nullptr)
-#ifdef ENABLE_EXCEPTIONS
-              ,
-              systemError(nullptr)
-#endif
-        {
-        }
+        Middleware *staticFile;
 
-        Whs(route::HttpRouter &&router) : Whs()
-        {
-            route.swap(router);
-        }
+    protected:
+        Whs();
+        Whs(route::HttpRouter &&router);
 
         void processing_request(Request &req, Response &resp);
 
@@ -813,6 +804,7 @@ namespace whs
 #endif
         }
 
+        bool enable_static_file(const std::string &, const std::string &);
         virtual bool stop() = 0;
         virtual bool init() = 0;
 

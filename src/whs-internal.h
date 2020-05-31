@@ -10,6 +10,10 @@
 #include <cstring>
 #include <cassert>
 
+#ifndef UNIX_HAVE_PTHREAD_H
+#include <thread>
+#endif
+
 #ifdef HAVE_LIBPCRE2
 #define PCRE2_CODE_UNIT_WIDTH 8
 struct pcre2_real_code_8;

@@ -65,6 +65,20 @@ namespace
 #endif
 }  // namespace
 
+Whs::Whs()
+{
+    notFound = nullptr;
+#ifdef ENABLE_EXCEPTIONS
+    systemError = nullptr;
+#endif
+    staticFile = nullptr;
+}
+
+Whs::Whs(route::HttpRouter&& router) : Whs()
+{
+    route.swap(router);
+}
+
 bool whs::TcpWhs::init_sock()
 {
     _sock = new sockaddr_in;
@@ -117,6 +131,11 @@ bool Whs::start()
 #ifdef ENABLE_EXCEPTIONS
     systemError = new SystemErrorHandler;
 #endif
+    if (staticFile != nullptr) {
+        auto sfs = reinterpret_cast<StaticFileServer*>(staticFile);
+        before.addMiddleware<StaticFileServer>(std::move(*sfs));
+        sfs->start();
+    }
     if (logger::whsLogger != nullptr) {
         atexit([]() {
             if (logger::whsLogger) {
@@ -125,4 +144,10 @@ bool Whs::start()
         });
     }
     return _start();
+}
+
+bool Whs::enable_static_file(const std::string& prefix, const std::string& local)
+{
+    this->staticFile = new StaticFileServer(prefix, local);
+    return true;
 }
