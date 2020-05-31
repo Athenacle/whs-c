@@ -146,9 +146,10 @@ void RestfulHttpResponse::setBody(const char* buf, size_t size)
 
 void RestfulHttpResponse::toBytes(char** ptr, size_t& size)
 {
-    if (_bodySize == 0) {
+    auto& cl = this->operator[](utils::CommonHeader::ContentLength);
+    if (_bodySize == 0 && cl == "") {
         static char zero[] = "0";
-        this->operator[](utils::CommonHeader::ContentLength) = zero;
+        cl = zero;
     }
     auto allocSize = calcHttpResponseSize(_headers, _bodySize) + 5;
 
