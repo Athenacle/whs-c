@@ -185,7 +185,7 @@ namespace
     }
 
     void buildHttpRouteBuilder(vector<tuple<string, bool, http_method>> &requests,
-                               HttpRouter::HttpRouteBuilder &builder,
+                               HttpRouteBuilder &builder,
                                map<string, shared_ptr<TestStatus>> *status,
                                const string &prefix)
     {
@@ -227,7 +227,7 @@ namespace
         vector<tuple<string, bool, http_method>> req;          \
         map<string, shared_ptr<TestStatus>> status;            \
                                                                \
-        HttpRouter::HttpRouteBuilder builder;                  \
+        HttpRouteBuilder builder;                              \
                                                                \
         buildHttpRouteBuilder(req, builder, &status, prefix);  \
         auto router = make_shared<HttpRouter>(move(builder));  \
