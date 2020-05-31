@@ -3,11 +3,23 @@ include(CheckFunctionExists)
 include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 include(CheckCXXCompilerFlag)
+include(CheckCXXSymbolExists)
 
 check_function_exists(getopt_long UNIX_HAVE_GETOPTLONG)
 check_function_exists(bzero HAVE_BZERO)
 if (UNIX)
     check_function_exists(pthread_mutex_lock UNIX_HAVE_PTHREAD_MUTEX)
+    check_include_file_cxx(pthread.h UNIX_HAVE_PTHREAD_H)
+    check_cxx_symbol_exists(epoll_create sys/epoll.h UNIX_HAVE_EPOLL)
+    check_cxx_symbol_exists(inotify_init sys/inotify.h UNIX_HAVE_INOTIFY)
+endif ()
+
+if (UNIX_HAVE_EPOLL)
+    add_compile_definitions(UNIX_HAVE_EPOLL)
+endif ()
+
+if (UNIX_HAVE_INOTIFY)
+    add_compile_definitions(UNIX_HAVE_INOTIFY)
 endif ()
 
 check_cxx_source_compiles(
