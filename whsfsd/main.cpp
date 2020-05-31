@@ -9,7 +9,7 @@ using namespace whs;
 using namespace std;
 using whs::route::HttpRouter;
 
-class TestMiddleware : Middleware
+class TestMiddleware : public Middleware
 {
     virtual bool operator()(RestfulHttpRequest &, RestfulHttpResponse &) const THROWS override
     {
@@ -69,6 +69,8 @@ int main()
         resp.setBody(dup_memory(buf, sizeof(buf) - 1), sizeof(buf) - 1);
         return true;
     });
+
+    builder.use<HTTP_GET, TestMiddleware>("/");
 
     route::HttpRouter r(std::move(builder));
 
