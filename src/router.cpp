@@ -15,7 +15,7 @@ MiddlewareVectorWrapper::MiddlewareVectorWrapper(const std::deque<MiddleFunction
 {
 }
 
-using builder = route::HttpRouter::HttpRouteBuilder;
+using builder = route::HttpRouteBuilder;
 using mp = MiddlewarePointer;
 using hr = route::HttpRouter;
 

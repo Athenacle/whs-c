@@ -62,7 +62,7 @@ namespace
 }  // namespace
 int main()
 {
-    route::HttpRouter::HttpRouteBuilder builder;
+    route::HttpRouteBuilder builder;
 
     builder.use(HTTP_GET, "/apple", [](Request &, Response &resp) -> bool {
         static char buf[] = "hello world";
