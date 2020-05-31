@@ -707,8 +707,9 @@ namespace whs
         public:
             std::vector<MiddlewarePointer> middles;
 
-            template <int Method, class Middle, class _ = EnableIfMiddleType<Middle>, class... Args>
-            reference use(const std::string &path, Args &&... args)
+            template <int Method, class Middle, class... Args>
+            auto use(const std::string &path, Args &&... args)
+                -> EnableIfMiddleType<Middle, reference>
             {
                 std::vector<std::string> paths;
                 Middleware *ware = new Middle(std::forward<Args>(args)...);
