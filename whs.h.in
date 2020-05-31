@@ -2,13 +2,8 @@
 #define WHS_H
 
 #cmakedefine ENABLE_LIBUV
-#cmakedefine ENABLE_EXCEPTIONS
-
-#ifdef ENABLE_EXCEPTIONS
+#define ENABLE_EXCEPTIONS
 #define THROWS noexcept(false)
-#else
-#define THROWS noexcept
-#endif
 
 // clang-format off
 #define WHS_VERSION "@WHS_VERSION@"
@@ -108,6 +103,8 @@ namespace whs
             AcceptEncoding,
             AcceptLanguage,
             ContentEncoding,
+            LastModified,
+            Etag,
             ContentType,
             ContentLength,
             Date,
@@ -406,6 +403,18 @@ namespace whs
         void addHeader(utils::CommonHeader h, const std::string &value)
         {
             _headers.emplace(h, value);
+        }
+
+        bool addHeaderIfNotExists(utils::CommonHeader h, const std::string &value)
+        {
+            HeaderName hn(h);
+            auto f = _headers.find(hn);
+            if (f == _headers.end()) {
+                _headers.emplace(std::move(hn), value);
+                return true;
+            } else {
+                return false;
+            }
         }
 
         void status(int i)
@@ -782,20 +791,11 @@ namespace whs
 #ifdef ENABLE_EXCEPTIONS
         Middleware *systemError;  // 500
 #endif
-    protected:
-        Whs()
-            : notFound(nullptr)
-#ifdef ENABLE_EXCEPTIONS
-              ,
-              systemError(nullptr)
-#endif
-        {
-        }
+        std::shared_ptr<Middleware> staticFile;
 
-        Whs(route::HttpRouter &&router) : Whs()
-        {
-            route.swap(router);
-        }
+    protected:
+        Whs();
+        Whs(route::HttpRouter &&router);
 
         void processing_request(Request &req, Response &resp);
 
@@ -813,6 +813,7 @@ namespace whs
 #endif
         }
 
+        bool enable_static_file(const std::string &, const std::string &);
         virtual bool stop() = 0;
         virtual bool init() = 0;
 
@@ -846,10 +847,9 @@ namespace whs
         TcpWhs(route::HttpRouter &&router, std::string &host, uint16_t port)
             : Whs(std::move(router)), _port(port), _host(host)
         {
-            init_sock();
         }
 
-        virtual ~TcpWhs() {}
+        virtual ~TcpWhs();
     };
 
 #ifdef ENABLE_LIBUV

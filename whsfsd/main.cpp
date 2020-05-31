@@ -75,6 +75,7 @@ int main()
     whs::LibuvWhs whs(std::move(r), "0.0.0.0", 12345u);
     whs::logger::setLogger<NLogger>();
     whs.setup();
+    whs.enable_static_file("/", "/tmp/html");
     pthread_t th;
 
     pthread_create(&th, nullptr, run, &whs);

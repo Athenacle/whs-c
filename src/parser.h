@@ -83,6 +83,10 @@ namespace whs
         void setCurrentHeaderField(std::string&& f)
         {
             currentHeaderField = f;
+            std::transform(currentHeaderField.begin(),
+                           currentHeaderField.begin(),
+                           currentHeaderField.end(),
+                           [](auto c) { return tolower(c); });
         }
 
         HttpParser(Client* = nullptr);

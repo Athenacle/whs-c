@@ -9,4 +9,8 @@
 
 #cmakedefine HAVE_BZERO
 
+#cmakedefine UNIX_HAVE_PTHREAD_H
+
+#define ENABLE_EXCEPTIONS
+
 #endif
