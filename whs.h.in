@@ -872,6 +872,7 @@ namespace whs
         uv_async_s *stop_async;
         uv_tcp_s *server;
         utils::mutex *m;
+        bool externalLoop;
 
         virtual bool _setup() override;
 
@@ -881,6 +882,8 @@ namespace whs
 
     public:
         LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port);
+        LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port, uv_loop_s *);
+
         virtual ~LibuvWhs();
 
         virtual bool _start() override;
