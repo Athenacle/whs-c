@@ -44,19 +44,19 @@ whs::utils::mutex::mutex()
 
 whs::utils::mutex::~mutex()
 {
-    auto m = reinterpret_cast<mutex_raw_type*>(data);
+    auto m = reinterpret_cast<mutex_raw_type *>(data);
     delete m;
 }
 
 void whs::utils::mutex::lock()
 {
-    auto m = reinterpret_cast<mutex_raw_type*>(data);
+    auto m = reinterpret_cast<mutex_raw_type *>(data);
     m->lock();
 }
 
 void whs::utils::mutex::unlock()
 {
-    auto m = reinterpret_cast<mutex_raw_type*>(data);
+    auto m = reinterpret_cast<mutex_raw_type *>(data);
     m->unlock();
 }
 #endif
