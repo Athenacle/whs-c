@@ -1,4 +1,4 @@
-#include "whs.h"
+#include "whs/entity.h"
 #include "whs-internal.h"
 
 #include <cmath>

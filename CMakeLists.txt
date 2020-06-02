@@ -67,7 +67,9 @@ set_target_properties(whs_static PROPERTIES OUTPUT_NAME whs)
 
 target_link_libraries(whs ${HTTP_PARSER_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
 
-configure_file(${CMAKE_SOURCE_DIR}/whs.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/whs.h)
+file(COPY ${CMAKE_SOURCE_DIR}/include/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/whs/)
+configure_file(${CMAKE_SOURCE_DIR}/whs_config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/whs/whs_config.h)
 configure_file(${CMAKE_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${PROJECT_NAME}.pc.in ${OUT_PATH}/${PROJECT_NAME}.pc @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -93,7 +95,7 @@ if (ENABLE_DOC)
 endif ()
 
 if (${ENABLE_WHSFSD})
-    add_executable(${WHSFSD_EXE} ${CMAKE_SOURCE_DIR}/whsfsd/main.cpp)
+    add_executable(${WHSFSD_EXE} ${CMAKE_SOURCE_DIR}/examples/main.cpp)
     target_include_directories(${WHSFSD_EXE} PUBLIC ${SPDLOG_INCLUDE_DIRS})
     target_compile_options(${WHSFSD_EXE} PUBLIC ${spdlog_CFLAGS})
     add_dependencies(${WHSFSD_EXE} whs)
@@ -106,6 +108,15 @@ if (${ENABLE_WHSFSD})
                 OpenSSL::Crypto
                 pthread)
 endif ()
+
+add_executable(bench ${CMAKE_SOURCE_DIR}/examples/bench.cpp)
+target_link_libraries(
+    bench
+    PRIVATE whs_static
+            ${THIRD_PARTY_LIBRARIES}
+            ${TEST_LIBRARY}
+            ${HTTP_PARSER_LIBRARIES}
+            OpenSSL::Crypto)
 
 if (${ENABLE_TEST})
     enable_testing()

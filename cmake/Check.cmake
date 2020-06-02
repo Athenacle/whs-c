@@ -57,6 +57,7 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQU
         Wlogical-op
         Wrestrict
         Wnull-dereference
+        Wno-c99-extensions
         fno-permissive)
 
     # check_cxx_compiler_flag(-fno-permissive COMPILER_SUPPORT_FNOPERMISSIVE)
