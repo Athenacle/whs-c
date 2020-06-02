@@ -149,21 +149,18 @@ namespace whs
 
         void addMiddleware(Middleware *p)
         {
-            _wares.emplace_back(std::make_pair("unknown", p));
-        }
-
-        template <class T, class _ = EnableIfMiddleType<T>, class... Args>
-        void addMiddleware(const std::string &name, Args &&... args)
-        {
-            MiddlewarePointer p(new T(std::forward<Args>(args)...));
-            _wares.emplace_back(std::make_pair(name, p));
+            auto name = utils::demangle(typeid(*p).name());
+            _wares.emplace_back(std::make_pair(name == nullptr ? "unknown" : name, p));
+            free((void *)name);
         }
 
         template <class T, class _ = EnableIfMiddleType<T>, class... Args>
         void addMiddleware(Args &&... args)
         {
+            auto name = utils::demangle(typeid(T).name());
             MiddlewarePointer p = new T(std::forward<Args>(args)...);
-            _wares.emplace_back(std::make_pair("unknown", p));
+            _wares.emplace_back(std::make_pair(name == nullptr ? "unknown" : name, p));
+            free((void *)name);
         }
 
         auto cend() const
