@@ -1,3 +1,5 @@
+#include "whs/entity.h"
+
 #include "whs-internal.h"
 #include "fmt/format.h"
 

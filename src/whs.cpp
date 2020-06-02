@@ -1,5 +1,5 @@
-#include "whs.h"
 #include "whs-internal.h"
+#include "whs/entity.h"
 #include "fmt/format.h"
 
 #ifdef ENABLE_LIBUV
@@ -69,53 +69,61 @@ namespace
 #endif
 }  // namespace
 
+Whs::~Whs()
+{
+    delete before;
+    delete route;
+    delete after;
+    delete notFound;
+    delete systemError;
+}
+
 Whs::Whs()
 {
+    route = nullptr;
+    after = new Pipeline;
+    before = new Pipeline;
     notFound = nullptr;
-#ifdef ENABLE_EXCEPTIONS
     systemError = nullptr;
-#endif
     staticFile = nullptr;
 }
 
-Whs::Whs(route::HttpRouter&& router) : Whs()
+
+void whs::Whs::setup(PipelineBuilder* a, route::HttpRouteBuilder* r, PipelineBuilder* b)
 {
-    route.swap(router);
+    if (a != nullptr) {
+        delete after;
+        after = new Pipeline(*a);
+    }
+    if (r != nullptr) {
+        route = new route::HttpRouter(std::move(*r));
+    }
+    if (b != nullptr) {
+        delete before;
+        before = new Pipeline(*b);
+    }
+    this->setup();
 }
 
-whs::TcpWhs::~TcpWhs()
+void Whs::setup()
 {
-    delete _sock;
-}
-
-bool whs::TcpWhs::init_sock()
-{
-    _sock = new sockaddr_in;
-#ifdef ENABLE_LIBUV
-    uv_ip4_addr(_host.c_str(), _port, _sock);
-#endif
-    return true;
-}
-
-bool TcpWhs::setup()
-{
-    return init_sock() && _setup() && init();
+    this->_setup();
+    this->init();
 }
 
 void Whs::processing_request(RestfulHttpRequest& req, RestfulHttpResponse& resp)
 {
-#ifdef ENABLE_EXCEPTIONS
     try {
-        auto status = before.feed(req, resp);
+        auto status = before->feed(req, resp);
 
         try {
             if (status) {
-                route.operator()(req, resp);
+                route->operator()(req, resp);
             }
         } catch (const route::NotFoundException& e) {
             notFound->operator()(req, resp);
         }
-        after.feed(req, resp);
+        after->feed(req, resp);
     } catch (const HttpException& he) {
         char* buf;
         size_t size;
@@ -123,14 +131,6 @@ void Whs::processing_request(RestfulHttpRequest& req, RestfulHttpResponse& resp)
         resp.setBody(buf, size);
         resp.status(he.getStatusCode());
     }
-#else
-    if (before.feed(req, resp)) {
-        if (!route.operator()(req, resp)) {
-            notFound->operator()(req, resp);
-        }
-        after.feed(req, resp);
-    }
-#endif
 }
 
 bool Whs::start()
@@ -138,13 +138,11 @@ bool Whs::start()
     if (notFound == nullptr) {
         setNotFoundHandler<NotFoundHandler>();
     }
-    after.addMiddleware<MergeDefaultCommonHeaders>();
-#ifdef ENABLE_EXCEPTIONS
+    after->addMiddleware<MergeDefaultCommonHeaders>();
     systemError = new SystemErrorHandler;
-#endif
     if (staticFile != nullptr) {
-        before.addMiddleware(staticFile);
-        reinterpret_cast<StaticFileServer*>(staticFile.get())->start();
+        before->addMiddleware(staticFile);
+        reinterpret_cast<StaticFileServer*>(staticFile)->start();
     }
     if (logger::whsLogger != nullptr) {
         atexit([]() {
@@ -153,12 +151,16 @@ bool Whs::start()
             }
         });
     }
+    if (route == nullptr) {
+        route::HttpRouteBuilder b;
+        this->route = new route::HttpRouter(std::move(b));
+    }
     return _start();
 }
 
 bool Whs::enable_static_file(const std::string& prefix, const std::string& local)
 {
     auto sf = new StaticFileServer(prefix, local);
-    this->staticFile.reset(sf);
+    this->staticFile = sf;
     return true;
 }

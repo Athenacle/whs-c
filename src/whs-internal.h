@@ -4,7 +4,7 @@
 
 #include "config.h"
 
-#include "whs.h"
+#include "whs/whs.h"
 
 #include <http_parser.h>
 #include <cstring>
@@ -33,9 +33,139 @@ namespace whs
     class HttpParser;
     class Client;
 
+
+    class Pipeline final
+    {
+        Middleware **wares;
+
+    public:
+        Pipeline(const PipelineBuilder &);
+        Pipeline();
+        ~Pipeline();
+
+        void addMiddleware(Middleware *);
+
+        template <class T, class _ = EnableIfMiddleType<T>, class... Args>
+        void addMiddleware(Args &&... args)
+        {
+            MiddlewarePointer p = new T(std::forward<Args>(args)...);
+            addMiddleware(p);
+        }
+
+        inline bool feed(Request &req, Response &res) const THROWS
+        {
+            bool ret = true;
+            for (auto first = wares; *first != nullptr; ++first) {
+                ret = ret && (*first)->operator()(req, res);
+                if (!ret) {
+                    break;
+                }
+            }
+            return ret;
+        }
+    };
+
+    class HttpParserException : public HttpException
+    {
+        int _parserErrorCode;
+
+    public:
+        explicit HttpParserException(int _ec) : _parserErrorCode(_ec) {}
+        HttpParserException(int _ec, const std::string &_msg)
+            : HttpException(_msg), _parserErrorCode(_ec)
+        {
+        }
+
+        int getErrorCode() const
+        {
+            return _parserErrorCode;
+        }
+
+        virtual ~HttpParserException();
+
+        virtual bool buildResponse(char *&, size_t &) const override;
+    };
+
+
     namespace route
     {
-        using MP = MiddlewarePointer;
+        struct HttpRouteNode {
+            HttpRouteNode **_children;
+            int _childrenCount;
+
+            HttpRouteNode()
+            {
+                _children = nullptr;
+                _childrenCount = 0;
+            }
+            virtual const MiddlewarePointer &getRoute(Request &,
+                                                      const char *,
+                                                      const char *) const THROWS = 0;
+
+            virtual ~HttpRouteNode();
+        };
+
+        struct HttpRouteStringNode : public HttpRouteNode {
+            const std::string _nodeName;
+
+            HttpRouteStringNode(const std::string name) : _nodeName(name) {}
+            HttpRouteStringNode(const char *nn) : _nodeName(nn) {}
+
+            virtual ~HttpRouteStringNode();
+
+            virtual const MiddlewarePointer &getRoute(Request &,
+                                                      const char *,
+                                                      const char *) const THROWS override;
+        };
+        struct HttpRouteRootNode : public HttpRouteStringNode {
+            const MiddlewarePointer &GetRoute(Request &req, const std::string &url) const;
+
+            HttpRouteRootNode(const std::string & = std::string());
+
+            virtual const MiddlewarePointer &getRoute(Request &,
+                                                      const char *,
+                                                      const char *) const THROWS override;
+        };
+        class HttpRouter : public Middleware
+        {
+            using iterator = std::vector<std::string>::const_iterator;
+            using MP = Middleware *;
+
+            HttpRouteRootNode *start;
+
+            std::vector<MiddlewarePointer> middles;
+
+            bool GetRoute(Middleware &, Request &) const;
+
+        public:
+            static const MP emptyMiddleware;
+
+            const MiddlewarePointer &GetRoute(Request &req, const std::string &url) const
+            {
+                return start->GetRoute(req, url);
+            }
+
+            virtual ~HttpRouter();
+
+            void swap(HttpRouter &);
+
+            HttpRouter();
+            HttpRouter(HttpRouter &&);
+            HttpRouter(HttpRouteBuilder &&b);
+            virtual bool operator()(Request &, Response &) const THROWS override;
+        };
+
+        class NotFoundException : public HttpException
+        {
+            std::string _url;
+            const Request &_req;
+
+        public:
+            NotFoundException(const Request &, const std::string &);
+            virtual bool buildResponse(char *&, size_t &) const override;
+        };
+
+        using MP = Middleware *;
 
         struct HttpRouteEndNode : public HttpRouteNode {
             int method;

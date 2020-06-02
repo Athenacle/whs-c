@@ -1,6 +1,4 @@
 
-#include "whs.h"
-
 #include "client.h"
 #include "utils.h"
 #include "parser.h"
@@ -166,17 +164,14 @@ bool HttpParser::readFromNetwork(char* buf, int size) THROWS
 {
     bool status = (int)http_parser_execute(&parser, &settings, buf, size) == size;
 
-#ifdef ENABLE_EXCEPTIONS
     if (!status) {
         auto eno = HTTP_PARSER_ERRNO(&parser);
         auto msg = http_errno_description(static_cast<http_errno>(eno));
         throw HttpParserException(parser.http_errno, msg);
     }
-#endif
 
     return status;
 }
-#ifdef ENABLE_EXCEPTIONS
 HttpParserException::~HttpParserException() {}
 
 bool HttpParserException::buildResponse(char*& ptr, size_t& size) const
@@ -228,4 +223,3 @@ route::NotFoundException::NotFoundException(const Request& req, const std::strin
     _statusCode = HTTP_STATUS_NOT_FOUND;
     _httpMethod = req.getMethod();
 }
-#endif

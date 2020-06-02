@@ -1,0 +1,23 @@
+#ifndef WHS_CONFIG_H_
+#define WHS_CONFIG_H_
+#cmakedefine ENABLE_LIBUV
+
+#cmakedefine HAVE_LIBPCRE2
+
+// clang-format off
+#define WHS_VERSION "@WHS_VERSION@"
+#define WHS_MAJOR_VERSION @MAJOR_VERSION@
+#define WHS_MINOR_VERSION @MINOR_VERSION@
+#define WHS_PATCH_VERSION @PATCH_VERSION@
+#define WHS_VERSION_HEX (WHS_MAJOR_VERSION << 24 | WHS_MINOR_VERSION << 8 | WHS_PATCH_VERSION)
+// clang-format on
+
+namespace whs
+{
+    inline const char* whs_version_string()
+    {
+        return WHS_VERSION;
+    }
+}  // namespace whs
+
+#endif

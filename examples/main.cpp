@@ -1,9 +1,19 @@
-#include "whs.h"
-#include "whsfsd.h"
+#include "whs/whs.h"
 
 #include <unistd.h>
 
 #include "spdlog/spdlog.h"
+
+#include <cstring>
+#include <http_parser.h>
+
+inline char *dup_memory(const void *buffer, size_t size)
+{
+    auto ret = new char[size];
+    memcpy(ret, buffer, size);
+    return ret;
+}
+
 
 using namespace whs;
 using namespace std;
@@ -63,20 +73,15 @@ namespace
 int main()
 {
     route::HttpRouteBuilder builder;
-
-    builder.use(HTTP_GET, "/apple", [](Request &, Response &resp) -> bool {
-        static char buf[] = "hello world";
-        resp.setBody(dup_memory(buf, sizeof(buf) - 1), sizeof(buf) - 1);
-        return true;
-    });
-
     builder.use<HTTP_GET, TestMiddleware>("/");
 
-    route::HttpRouter r(std::move(builder));
-
-    whs::LibuvWhs whs(std::move(r), "0.0.0.0", 12345u);
+    whs::LibuvWhs whs("0.0.0.0", 12345u);
     whs::logger::setLogger<NLogger>();
-    whs.setup();
+    whs::PipelineBuilder a, b;
+    a.addMiddleware<TestMiddleware>();
+    b.addMiddleware<TestMiddleware>();
+
+    whs.setup(&a, &builder, &b);
     whs.enable_static_file("/", "/tmp/html");
     pthread_t th;
 

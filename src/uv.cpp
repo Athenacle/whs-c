@@ -1,11 +1,9 @@
-
-#include "whs.h"
+#include "whs-internal.h"
 #ifdef ENABLE_LIBUV
 
 #include <functional>
 #include <uv.h>
 #include "client.h"
-#include "whs-internal.h"
 #include "fmt/format.h"
 
 using namespace whs;
@@ -98,6 +96,7 @@ namespace whs::utils
 
 bool uv::_setup()
 {
+    setup_tcp();
     if (!externalLoop) {
         uv_loop_init(loop);
     }
@@ -167,8 +166,7 @@ bool uv::_start()
     return true;
 }
 
-uv::LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port, uv_loop_s *l)
-    : TcpWhs(std::move(router), host, port)
+uv::LibuvWhs(std::string &&host, uint16_t port, uv_loop_s *l) : TcpWhs(host, port)
 {
     loop = l;
     server = new uv_tcp_s;
@@ -179,8 +177,7 @@ uv::LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port, uv_l
     externalLoop = true;
 }
 
-uv::LibuvWhs(route::HttpRouter &&router, std::string &&host, uint16_t port)
-    : LibuvWhs(std::move(router), std::move(host), port, new uv_loop_s)
+uv::LibuvWhs(std::string &&host, uint16_t port) : LibuvWhs(std::move(host), port, new uv_loop_s)
 {
     externalLoop = false;
 }

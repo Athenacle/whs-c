@@ -1,7 +1,9 @@
 #ifndef WHS_PARSER_H
 #define WHS_PARSER_H
 
-#include "whs.h"
+#include "whs/whs.h"
+#include "whs/entity.h"
+
 #include "whs-internal.h"
 #include "utils.h"
 

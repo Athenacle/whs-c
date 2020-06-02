@@ -1,7 +1,7 @@
 
 #include "gtest/gtest.h"
 
-#include "whs.h"
+#include "whs/whs.h"
 #include "whs-internal.h"
 #include "parser.h"
 
@@ -184,6 +184,20 @@ namespace
         return true;
     }
 
+    class TestMiddleware : public Middleware
+    {
+        using funct = std::function<bool(Request &, Response &)>;
+        funct func;
+
+    public:
+        TestMiddleware(funct f) : func(f) {}
+
+        virtual bool operator()(Request &req, Response &resp) const THROWS override
+        {
+            return func(req, resp);
+        }
+    };
+
     void buildHttpRouteBuilder(vector<tuple<string, bool, http_method>> &requests,
                                HttpRouteBuilder &builder,
                                map<string, shared_ptr<TestStatus>> *status,
@@ -197,9 +211,7 @@ namespace
             auto &path = tcase.first;
             auto &meta = tcase.second;
             int method = get<0>(meta);
-            builder.use(method, path, bind(_testFunc, status, _1, _2), [](Request &, Response &) {
-                return true;
-            });
+            builder.use<TestMiddleware>(method, path, bind(_testFunc, status, _1, _2));
         }
     }
 }  // namespace
@@ -230,12 +242,12 @@ namespace
         HttpRouteBuilder builder;                              \
                                                                \
         buildHttpRouteBuilder(req, builder, &status, prefix);  \
-        auto router = make_shared<HttpRouter>(move(builder));  \
+        auto router = new HttpRouter(move(builder));           \
                                                                \
         Response res;                                          \
                                                                \
         Pipeline pipe;                                         \
-        pipe.addMiddleware(move(router));                      \
+        pipe.addMiddleware((router));                          \
         for (auto &path : req) {                               \
             Request request;                                   \
             const auto &[url, access, method] = path;          \

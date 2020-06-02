@@ -1,19 +1,9 @@
-#include "whs.h"
+#include "whs/entity.h"
 #include "whs-internal.h"
 
 using std::string;
 using namespace whs;
 using namespace whs::route;
-
-Middleware::~Middleware() {}
-
-MiddlewareWrapper::~MiddlewareWrapper() {}
-
-MiddlewareVectorWrapper::~MiddlewareVectorWrapper() {}
-
-MiddlewareVectorWrapper::MiddlewareVectorWrapper(const std::deque<MiddleFunction>& ve) : _funcs(ve)
-{
-}
 
 using builder = route::HttpRouteBuilder;
 using mp = MiddlewarePointer;
@@ -113,20 +103,22 @@ void builder::buildTreeNode(TreeNode* bnode, HttpRouteNode* rnode)
 
 
 void builder::insertChild(
-    int method, TreeNode* current, iterator begin, iterator end, std::shared_ptr<Middleware> m)
+    int method, TreeNode* current, iterator begin, iterator end, Middleware* m, const char* name)
 {
     if (begin == end) {
         auto ins = new TreeNode;
         ins->type = TreeNodeType::URL_SEGMENT_END;
         ins->method = method;
         ins->func = m;
+        ins->_midName = name == nullptr ? "unknown" : name;
         current->_children.push_back(ins);
+        endNodes.emplace_back(ins);
         return;
     }
     auto children = current->_children;
     for (auto& c : children) {
         if (c->operator==(*begin)) {
-            return insertChild(method, c, begin + 1, end, m);
+            return insertChild(method, c, begin + 1, end, m, name);
         }
     }
 
@@ -138,7 +130,7 @@ void builder::insertChild(
     ins->type =
         utils::isParam(*begin) ? TreeNodeType::URL_QUERY_SEGMENT : TreeNodeType::URL_STRING_SEGMENT;
     current->_children.push_back(ins);
-    insertChild(method, ins, begin + 1, end, m);
+    insertChild(method, ins, begin + 1, end, m, name);
 }
 
 HttpRouteRootNode::HttpRouteRootNode(const string& myName) : HttpRouteStringNode(myName) {}
@@ -265,6 +257,9 @@ HttpRouter::HttpRouter(HttpRouteBuilder&& b)
 
 hr::~HttpRouter()
 {
+    for (auto& p : middles) {
+        delete p;
+    }
     delete start;
 }
 

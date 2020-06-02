@@ -1,7 +1,7 @@
 
 #ifndef WHS_CLIENT_H
 #define WHS_CLIENT_H
-#include "whs.h"
+#include "whs/whs.h"
 #include "whs-internal.h"
 
 #include "parser.h"
