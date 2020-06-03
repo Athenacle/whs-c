@@ -91,18 +91,18 @@ Whs::Whs()
 }
 
 
-void whs::Whs::setup(PipelineBuilder* a, route::HttpRouteBuilder* r, PipelineBuilder* b)
+void whs::Whs::setup(PipelineBuilder* bef, route::HttpRouteBuilder* r, PipelineBuilder* aft)
 {
-    if (a != nullptr) {
+    if (aft != nullptr) {
         delete after;
-        after = new Pipeline(*a);
+        after = new Pipeline(*aft);
     }
     if (r != nullptr) {
         route = new route::HttpRouter(std::move(*r));
     }
-    if (b != nullptr) {
+    if (bef != nullptr) {
         delete before;
-        before = new Pipeline(*b);
+        before = new Pipeline(*bef);
     }
     this->setup();
 }
