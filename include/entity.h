@@ -241,7 +241,7 @@ namespace whs
         {
             _body = nullptr;
             _bodySize = 0;
-            _status = 200;
+            _status = 0;
         }
 
         void toBytes(char **ptr, size_t &size);
@@ -292,6 +292,11 @@ namespace whs
             HeaderName n(p.first);
 
             return _headers.insert(std::make_pair(std::move(n), p.second));
+        }
+
+        bool isBodySet() const
+        {
+            return _status != 0;
         }
     };
 
