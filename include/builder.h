@@ -94,6 +94,16 @@ namespace whs
             std::vector<TreeNode *> endNodes;
 
         public:
+            auto begin() const
+            {
+                return endNodes.begin();
+            }
+
+            auto end() const
+            {
+                return endNodes.end();
+            }
+
             template <class Middle, class... Args>
             auto use(int Method, const std::string &path, Args &&... args)
                 -> EnableIfMiddleType<Middle, reference>
@@ -163,16 +173,15 @@ namespace whs
             free((void *)name);
         }
 
-        auto cend() const
+        auto end() const
         {
-            return _wares.cend();
+            return _wares.end();
         }
 
-        auto cbegin() const
+        auto begin() const
         {
-            return _wares.cbegin();
+            return _wares.begin();
         }
-#define AddMiddleware(pb, Middle, ...) pb.addMiddleware<Middle>(#Middle __VA_ARGS__)
     };
 
 }  // namespace whs
