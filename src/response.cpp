@@ -124,14 +124,12 @@ void RestfulHttpResponse::setBody(const char* buf, size_t size)
 {
     char buffer[24] = {0};
 
-    addHeader(utils::CommonHeader::ContentType, "text/plain");
     auto& type = this->operator[](utils::CommonHeader::ContentType);
     if (type.empty()) {
         type = "text/plain";
     }
 
     addHeader(utils::CommonHeader::ContentLength, string(itoa(buffer, size)));
-    addHeader(utils::CommonHeader::ContentEncoding, "identity");
 
     _body = buf;
     _bodySize = size;
