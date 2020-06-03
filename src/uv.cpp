@@ -111,7 +111,9 @@ bool uv::_setup()
         return false;
     }
     debug("whs: libuv backend setup success");
-    uv_async_init(loop, stop_async, utils::uvAsyncStopCB);
+    if (!externalLoop) {
+        uv_async_init(loop, stop_async, utils::uvAsyncStopCB);
+    }
     return true;
 }
 
@@ -138,31 +140,36 @@ bool uv::init()
 
 void uv::stop_uv()
 {
-    m->lock();
-    uv_read_stop(reinterpret_cast<ust *>(server));
     if (!externalLoop) {
-        uv_stop(loop);
-        uv_walk(
-            loop, [](uv_handle_t *h, void *) { uv_close((uv_handle_t *)h, nullptr); }, nullptr);
-        uv_loop_close(loop);
+        m->lock();
+        uv_read_stop(reinterpret_cast<ust *>(server));
+        if (!externalLoop) {
+            uv_stop(loop);
+            uv_walk(
+                loop, [](uv_handle_t *h, void *) { uv_close((uv_handle_t *)h, nullptr); }, nullptr);
+            uv_loop_close(loop);
+        }
+        m->unlock();
     }
-    m->unlock();
     info("whs: libuv backend stopped.");
 }
 
 bool uv::stop()
 {
-    uv_async_send(stop_async);
+    if (!externalLoop) {
+        uv_async_send(stop_async);
+    }
     return true;
 }
 
 bool uv::_start()
 {
-    debug("whs: libuv backend start.");
-    uv_run(loop, UV_RUN_DEFAULT);
-    m->lock();
-    m->unlock();
-
+    if (!externalLoop) {
+        debug("whs: libuv backend start.");
+        uv_run(loop, UV_RUN_DEFAULT);
+        m->lock();
+        m->unlock();
+    }
     return true;
 }
 
