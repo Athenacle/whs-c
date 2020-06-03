@@ -46,10 +46,12 @@ namespace
     public:
         virtual bool operator()(Request& req, Response& resp) const THROWS override
         {
-            string&& r = fmt::format("route to {} not found.", req.getBaseURL());
-            resp.setBody(utils::dup_memory(r.c_str(), r.length()), r.length());
-            resp.status(HTTP_STATUS_NOT_FOUND);
-            resp.addHeader(whs::utils::CommonHeader::ContentType, "text/plain");
+            if (!resp.isBodySet()) {
+                string&& r = fmt::format("route to {} not found.", req.getBaseURL());
+                resp.setBody(utils::dup_memory(r.c_str(), r.length()), r.length());
+                resp.status(HTTP_STATUS_NOT_FOUND);
+                resp.addHeader(whs::utils::CommonHeader::ContentType, "text/plain");
+            }
             return true;
         }
     };

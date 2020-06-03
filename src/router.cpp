@@ -111,6 +111,8 @@ void builder::insertChild(
         ins->method = method;
         ins->func = m;
         ins->_midName = name == nullptr ? "unknown" : name;
+        ins->_pathToMe = current->_pathToMe;
+        free((void*)(name));
         current->_children.push_back(ins);
         endNodes.emplace_back(ins);
         return;
