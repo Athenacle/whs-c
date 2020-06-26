@@ -54,14 +54,10 @@ namespace whs
 
         inline bool feed(Request &req, Response &res) const THROWS
         {
-            bool ret = true;
             for (auto first = wares; *first != nullptr; ++first) {
-                ret = ret && (*first)->operator()(req, res);
-                if (!ret) {
-                    break;
-                }
+                (*first)->operator()(req, res);
             }
-            return ret;
+            return true;
         }
     };
 

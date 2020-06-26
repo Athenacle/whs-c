@@ -1,7 +1,7 @@
 include(CTest)
 include(GTest)
 
-add_executable(whstest test.cpp)
+add_executable(whstest test.cpp builder.cpp)
 
 add_test(NAME AllInOneTest COMMAND whstest WORKING_DIRECTORY ${OUT_PATH})
 
