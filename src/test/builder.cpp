@@ -42,3 +42,11 @@ TEST(builder_test, pipelinebuilder)
 
     ASSERT_EQ(resp.status(), 10);  // 0 + 1 + 2 + 3 + 4
 }
+
+TEST(entity, request_process_data)
+{
+    Request req;
+    req.put_processing_data("apple", &req);
+    ASSERT_EQ(req.get_processing_data("apple"), &req);
+    ASSERT_EQ(req.get_processing_data("orange"), nullptr);
+}

@@ -64,11 +64,27 @@ namespace whs
 
         Map _headers;
 
+        std::map<std::string, void *> process_data;
+
         RestfulHttpRequest(const RestfulHttpRequest &) = delete;
 
     public:
         RestfulHttpRequest();
 
+        void put_processing_data(const std::string &key, void *data)
+        {
+            process_data.emplace(key, data);
+        }
+
+        void *get_processing_data(const std::string &key)
+        {
+            auto find = process_data.find(key);
+            if (find == process_data.end()) {
+                return nullptr;
+            } else {
+                return find->second;
+            }
+        }
 
         RestfulHttpRequest(RestfulHttpRequest &&);
 
@@ -145,6 +161,7 @@ namespace whs
 
         int _status;
         unsigned int _bodySize;
+
 
     public:
         class HeaderName
