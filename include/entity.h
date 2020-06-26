@@ -273,6 +273,11 @@ namespace whs
             _status = i;
         }
 
+        int status()
+        {
+            return _status;
+        }
+
         std::string &operator[](utils::CommonHeader h)
         {
             HeaderName n(h);
