@@ -222,6 +222,29 @@ namespace whs
         }
     };
 
+    class RawWhs : public Whs
+    {
+    protected:
+        virtual bool _start() override;
+        virtual bool _setup() override;
+
+    public:
+        virtual bool stop() override;
+        virtual bool init() override;
+
+        Client *c;
+
+    public:
+        RawWhs();
+        virtual ~RawWhs();
+
+        void in(char *, size_t);
+        void out(char *, size_t &);
+        size_t readable_size();
+
+        virtual void write(Client *, char *, size_t) override;
+    };
+
     class TcpWhs : public Whs
     {
         bool init_sock();

@@ -26,6 +26,7 @@ option(ENABLE_WHSFSD "Enable main" ON)
 option(ENABLE_EXCEPTIONS "Enable C++ Exceptions" ON)
 option(ENABLE_TEST "Enable Tests" ON)
 option(ENABLE_DOC "Enable Documentation (need Doxygen)" OFF)
+option(ENABLE_SHARED "Enable Shared Library" OFF)
 
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party)
 file(MAKE_DIRECTORY ${THIRD_PARTY_DIR})
@@ -61,11 +62,16 @@ endif ()
 
 aux_source_directory(${CMAKE_SOURCE_DIR}/src/ whs_src)
 list(APPEND whs_src ${THIRD_PARTY_SOURCE})
-add_library(whs SHARED ${whs_src})
-add_library(whs_static STATIC ${whs_src})
-set_target_properties(whs_static PROPERTIES OUTPUT_NAME whs)
+
+if (ENABLE_SHARED)
+    add_library(whs SHARED ${whs_src})
+else ()
+    add_library(whs STATIC ${whs_src})
+endif ()
 
 target_link_libraries(whs ${HTTP_PARSER_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
+
+get_git_hash(GIT_HASH)
 
 file(COPY ${CMAKE_SOURCE_DIR}/include/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/whs/)
 configure_file(${CMAKE_SOURCE_DIR}/whs_config.h.in
@@ -101,7 +107,7 @@ if (${ENABLE_WHSFSD})
     add_dependencies(${WHSFSD_EXE} whs)
     target_link_libraries(
         ${WHSFSD_EXE}
-        PRIVATE whs_static
+        PRIVATE whs
                 ${THIRD_PARTY_LIBRARIES}
                 ${TEST_LIBRARY}
                 ${HTTP_PARSER_LIBRARIES}
@@ -112,7 +118,7 @@ endif ()
 add_executable(bench ${CMAKE_SOURCE_DIR}/examples/bench.cpp)
 target_link_libraries(
     bench
-    PRIVATE whs_static
+    PRIVATE whs
             ${THIRD_PARTY_LIBRARIES}
             ${TEST_LIBRARY}
             ${HTTP_PARSER_LIBRARIES}

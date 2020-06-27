@@ -1,7 +1,7 @@
 include(CTest)
 include(GTest)
 
-add_executable(whstest test.cpp builder.cpp)
+add_executable(whstest test.cpp builder.cpp raw.cpp)
 
 add_test(NAME AllInOneTest COMMAND whstest WORKING_DIRECTORY ${OUT_PATH})
 
@@ -12,7 +12,7 @@ target_link_libraries(
     PUBLIC libgtest
            libgmock
            libgtest_main
-           whs_static
+           whs
            OpenSSL::Crypto
            ${HTTP_PARSER_LIBRARIES}
            ${TEST_LIBRARY})

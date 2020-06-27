@@ -1,6 +1,8 @@
 #include "whs-internal.h"
 #include "whs/entity.h"
 #include "fmt/format.h"
+#include "client.h"
+#include "utils.h"
 
 #ifdef ENABLE_LIBUV
 #include <uv.h>
@@ -164,5 +166,59 @@ bool Whs::enable_static_file(const std::string& prefix, const std::string& local
 {
     auto sf = new StaticFileServer(prefix, local);
     this->staticFile = sf;
+    return true;
+}
+
+RawWhs::RawWhs()
+{
+    auto mb = new whsutils::MemoryBuffer();
+    c = new Client(this, mb);
+}
+
+RawWhs::~RawWhs()
+{
+    auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
+    delete mb;
+    delete c;
+}
+
+void RawWhs::write(Client*, char* buf, size_t s)
+{
+    auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
+    mb->write(buf, s);
+}
+
+void RawWhs::in(char* buf, size_t s)
+{
+    c->read_from_network(s, buf);
+}
+
+void RawWhs::out(char* buf, size_t& s)
+{
+    auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
+    auto r = mb->read(buf, s);
+    s = r;
+}
+
+size_t RawWhs::readable_size()
+{
+    auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
+    return mb->stored();
+}
+
+bool RawWhs::_start()
+{
+    return true;
+}
+bool RawWhs::_setup()
+{
+    return true;
+}
+bool RawWhs::stop()
+{
+    return true;
+}
+bool RawWhs::init()
+{
     return true;
 }

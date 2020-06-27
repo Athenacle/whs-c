@@ -1,11 +1,13 @@
 #ifndef WHS_CONFIG_H_
 #define WHS_CONFIG_H_
+
 #cmakedefine ENABLE_LIBUV
 
 #cmakedefine HAVE_LIBPCRE2
 
 // clang-format off
 #define WHS_VERSION "@WHS_VERSION@"
+#define WHS_GIT_SHA "@GIT_HASH@"
 #define WHS_MAJOR_VERSION @MAJOR_VERSION@
 #define WHS_MINOR_VERSION @MINOR_VERSION@
 #define WHS_PATCH_VERSION @PATCH_VERSION@

@@ -62,6 +62,10 @@ namespace whsutils
         {
             return _gcount;
         }
+        size_t stored() const
+        {
+            return _stored;
+        }
         operator bool()
         {
             return true;
