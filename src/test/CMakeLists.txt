@@ -12,7 +12,7 @@ target_link_libraries(
     PUBLIC libgtest
            libgmock
            libgtest_main
-           whs_static
+           whs
            OpenSSL::Crypto
            ${HTTP_PARSER_LIBRARIES}
            ${TEST_LIBRARY})
