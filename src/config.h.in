@@ -5,7 +5,6 @@
 
 #cmakedefine UNIX_HAVE_PTHREAD_MUTEX
 
-
 #cmakedefine HAVE_BZERO
 
 #cmakedefine UNIX_HAVE_PTHREAD_H

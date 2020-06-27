@@ -71,6 +71,8 @@ endif ()
 
 target_link_libraries(whs ${HTTP_PARSER_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
 
+get_git_hash(GIT_HASH)
+
 file(COPY ${CMAKE_SOURCE_DIR}/include/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/whs/)
 configure_file(${CMAKE_SOURCE_DIR}/whs_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/whs/whs_config.h)
