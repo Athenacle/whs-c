@@ -27,6 +27,8 @@ option(ENABLE_EXCEPTIONS "Enable C++ Exceptions" ON)
 option(ENABLE_TEST "Enable Tests" ON)
 option(ENABLE_DOC "Enable Documentation (need Doxygen)" OFF)
 option(ENABLE_SHARED "Enable Shared Library" OFF)
+option(ENABLE_POSITION_INDEPENDENT_CODE_IN_STATIC_LIB
+       "Enable POSITION_INDEPENDENT_CODE in static lib" OFF)
 
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party)
 file(MAKE_DIRECTORY ${THIRD_PARTY_DIR})
@@ -67,6 +69,9 @@ if (ENABLE_SHARED)
     add_library(whs SHARED ${whs_src})
 else ()
     add_library(whs STATIC ${whs_src})
+    if (ENABLE_POSITION_INDEPENDENT_CODE_IN_STATIC_LIB)
+        set_property(TARGET whs PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+    endif ()
 endif ()
 
 target_link_libraries(whs ${HTTP_PARSER_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
