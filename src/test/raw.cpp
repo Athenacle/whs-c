@@ -46,13 +46,13 @@ TEST(whs, RawWhs)
 
     r.in(req_1, sizeof(req_1) - 1);
     char buf[512];
-    size_t s = r.readable_size();
+    size_t s = 512;
     ASSERT_NE(s, 0u);
     ASSERT_LE(s, 512u);
     r.out(buf, s);
     std::string out(buf, s);
     auto pos = out.find_last_of("\r\n\r\n");
-    ASSERT_NE(pos, std::string::npos);
+    ASSERT_NE(pos, std::string::npos) << s;
     auto sub = out.substr(pos + 1);
     ASSERT_NE(sub.length(), 0u);
     ASSERT_EQ(sub, spStr);

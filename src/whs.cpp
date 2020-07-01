@@ -197,7 +197,8 @@ void RawWhs::in(const char* buf, size_t s)
 void RawWhs::out(char* buf, size_t& s)
 {
     auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
-    auto r = mb->read(buf, s);
+    auto rs = mb->stored();
+    auto r = mb->read(buf, rs);
     s = r;
 }
 

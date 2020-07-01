@@ -53,7 +53,7 @@ size_t MemoryBuffer::write(const char *at, size_t size)
     return wroteSize;
 }
 
-size_t MemoryBuffer::read(char *dest, size_t size)
+size_t MemoryBuffer::read(char *dest, size_t &size)
 {
 #ifndef NDEBUG
     auto testfunc = [this]() -> bool {
@@ -69,9 +69,6 @@ size_t MemoryBuffer::read(char *dest, size_t size)
 
     _gcount = 0;
     size_t readSize = 0;
-    if (_stored < size) {
-        return 0;
-    }
     auto ptr = dest;
     auto remain = size;
     for (auto begin = _pool.begin(); begin != _pool.end(); begin++) {
