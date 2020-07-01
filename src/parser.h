@@ -96,6 +96,8 @@ namespace whs
         bool readFromNetwork(const char*, int) THROWS;
 
         void finishCurrentRequest();
+
+        void reset();
     };
 }  // namespace whs
 

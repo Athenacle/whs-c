@@ -19,3 +19,8 @@ void Client::write_response(Response& resp)
     resp.toBytes(&buf, size);
     whs->write(this, buf, size);
 }
+
+void Client::reset()
+{
+    parser.reset();
+}

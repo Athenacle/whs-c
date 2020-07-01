@@ -240,6 +240,7 @@ namespace whs
 
         void in(const char *, size_t);
         void out(char *, size_t &);
+        void reset();
         size_t readable_size();
 
         virtual void write(Client *, char *, size_t) override;

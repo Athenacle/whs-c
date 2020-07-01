@@ -31,6 +31,7 @@ namespace whs
         void processing_request(Request &, Response &);
 
     public:
+        void reset();
         void write_response(Response &);
         void read_from_network(ssize_t, const char *);
         bool connection_should_close()

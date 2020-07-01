@@ -211,6 +211,14 @@ bool route::NotFoundException::buildResponse(char*& ptr, size_t& size) const
     return true;
 }
 
+void HttpParser::reset()
+{
+    http_parser_init(&parser, HTTP_REQUEST);
+    bodyLength = 0;
+    Request req;
+    current.swap(req);
+}
+
 
 route::NotFoundException::NotFoundException(const Request& req, const std::string& url)
     : HttpException(std::string("Not Found exception: ")
