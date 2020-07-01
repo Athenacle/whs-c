@@ -160,7 +160,7 @@ void HttpParser::finishCurrentRequest()
     }
 }
 
-bool HttpParser::readFromNetwork(char* buf, int size) THROWS
+bool HttpParser::readFromNetwork(const char* buf, int size) THROWS
 {
     bool status = (int)http_parser_execute(&parser, &settings, buf, size) == size;
 

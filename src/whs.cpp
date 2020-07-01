@@ -188,7 +188,7 @@ void RawWhs::write(Client*, char* buf, size_t s)
     mb->write(buf, s);
 }
 
-void RawWhs::in(char* buf, size_t s)
+void RawWhs::in(const char* buf, size_t s)
 {
     c->read_from_network(s, buf);
 }

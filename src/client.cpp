@@ -2,7 +2,7 @@
 #include "client.h"
 
 
-void Client::read_from_network(ssize_t size, char* buf)
+void Client::read_from_network(ssize_t size, const char* buf)
 {
     parser.readFromNetwork(buf, size);
 }

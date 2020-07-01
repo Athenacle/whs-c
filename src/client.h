@@ -32,7 +32,7 @@ namespace whs
 
     public:
         void write_response(Response &);
-        void read_from_network(ssize_t, char *);
+        void read_from_network(ssize_t, const char *);
         bool connection_should_close()
         {
             return parser.shouldCloseConnection();

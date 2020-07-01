@@ -93,7 +93,7 @@ namespace whs
 
         HttpParser(Client* = nullptr);
 
-        bool readFromNetwork(char*, int) THROWS;
+        bool readFromNetwork(const char*, int) THROWS;
 
         void finishCurrentRequest();
     };

@@ -238,7 +238,7 @@ namespace whs
         RawWhs();
         virtual ~RawWhs();
 
-        void in(char *, size_t);
+        void in(const char *, size_t);
         void out(char *, size_t &);
         size_t readable_size();
 
