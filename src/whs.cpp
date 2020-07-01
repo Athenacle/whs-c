@@ -186,6 +186,7 @@ void RawWhs::write(Client*, char* buf, size_t s)
 {
     auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
     mb->write(buf, s);
+    delete[] buf;
 }
 
 void RawWhs::in(const char* buf, size_t s)
