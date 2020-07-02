@@ -143,7 +143,7 @@ namespace
     {
         if (__internal::paramRE == nullptr) {
             __internal::paramRE =
-                utils::regex::compile("^{(?<name>[[:alnum:]]+)(:(?<regex>\\S+))?}$");
+                utils::regex::compile("^{(?<name>([[:alnum:]]|_)+)(:(?<regex>\\S+))?}$");
             assert(__internal::paramRE);
             atexit([]() {
                 delete __internal::paramRE;
