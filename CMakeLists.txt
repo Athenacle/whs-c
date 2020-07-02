@@ -83,8 +83,9 @@ configure_file(${CMAKE_SOURCE_DIR}/whs_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/whs/whs_config.h)
 configure_file(${CMAKE_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${PROJECT_NAME}.pc.in ${OUT_PATH}/${PROJECT_NAME}.pc @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 if (ENABLE_DOC)
     find_package(Doxygen OPTIONAL_COMPONENTS mscgen dia dot)
