@@ -97,6 +97,13 @@ namespace whs
 
     class TcpWhs;
 
+    class ResponseBodyType
+    {
+    public:
+        virtual void toBytes(char *&, size_t &) const = 0;
+        virtual ~ResponseBodyType() {}
+    };
+
 #ifdef ENABLE_LIBUV
     class LibuvWhs;
 #endif

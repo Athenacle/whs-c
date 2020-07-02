@@ -309,6 +309,14 @@ namespace whs
 
         void setBody(const char *buf, size_t size);
 
+        void setBody(const ResponseBodyType *t)
+        {
+            char *buf;
+            size_t size;
+            t->toBytes(buf, size);
+            setBody(buf, size);
+        }
+
         auto operator[](pair p)
         {
             HeaderName n(p.first);
