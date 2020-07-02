@@ -315,6 +315,10 @@ namespace whs
             size_t size;
             t->toBytes(buf, size);
             setBody(buf, size);
+            auto ct = t->getContentType();
+            if (ct != nullptr) {
+                addHeader(whs::utils::CommonHeader::ContentType, ct);
+            }
         }
 
         auto operator[](pair p)

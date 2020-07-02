@@ -102,6 +102,11 @@ namespace whs
     public:
         virtual void toBytes(char *&, size_t &) const = 0;
         virtual ~ResponseBodyType() {}
+
+        virtual const char *getContentType() const
+        {
+            return nullptr;
+        }
     };
 
 #ifdef ENABLE_LIBUV
