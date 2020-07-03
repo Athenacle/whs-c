@@ -161,6 +161,7 @@ namespace whs
 
         int _status;
         unsigned int _bodySize;
+        bool _end;
 
 
     public:
@@ -259,6 +260,7 @@ namespace whs
             _body = nullptr;
             _bodySize = 0;
             _status = 0;
+            _end = false;
         }
 
         void toBytes(char **ptr, size_t &size);
@@ -331,6 +333,16 @@ namespace whs
         bool isBodySet() const
         {
             return _status != 0;
+        }
+
+        void end()
+        {
+            _end = true;
+        }
+
+        bool isEnded() const
+        {
+            return _end;
         }
     };
 

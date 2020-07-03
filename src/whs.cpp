@@ -119,13 +119,14 @@ void Whs::processing_request(RestfulHttpRequest& req, RestfulHttpResponse& resp)
 {
     try {
         auto status = before->feed(req, resp);
-
-        try {
-            if (status) {
-                route->operator()(req, resp);
+        if (resp.isEnded()) {
+            try {
+                if (status) {
+                    route->operator()(req, resp);
+                }
+            } catch (const route::NotFoundException& e) {
+                notFound->operator()(req, resp);
             }
-        } catch (const route::NotFoundException& e) {
-            notFound->operator()(req, resp);
         }
         after->feed(req, resp);
     } catch (const HttpException& he) {
