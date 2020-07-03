@@ -119,7 +119,7 @@ void Whs::processing_request(RestfulHttpRequest& req, RestfulHttpResponse& resp)
 {
     try {
         auto status = before->feed(req, resp);
-        if (resp.isEnded()) {
+        if (!resp.isEnded()) {
             try {
                 if (status) {
                     route->operator()(req, resp);
