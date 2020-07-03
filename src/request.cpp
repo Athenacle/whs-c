@@ -60,6 +60,7 @@ void RestfulHttpRequest::swap(RestfulHttpRequest& req)
     std::swap(_method, req._method);
     std::swap(_body, req._body);
 
+    process_data.swap(req.process_data);
     _headers.swap(req._headers);
     _baseURL.swap(req._baseURL);
 }

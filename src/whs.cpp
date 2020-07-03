@@ -205,6 +205,8 @@ void RawWhs::out(char* buf, size_t& s)
 void RawWhs::reset()
 {
     c->reset();
+    auto mb = reinterpret_cast<whsutils::MemoryBuffer*>(c->get_data());
+    mb->clear();
 }
 
 size_t RawWhs::readable_size()

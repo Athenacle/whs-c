@@ -8,6 +8,12 @@ using std::string;
 using namespace whs;
 using whsutils::MemoryBuffer;
 
+void MemoryBuffer::clear()
+{
+    _pool.clear();
+    _gcount = _stored = 0;
+}
+
 size_t MemoryBuffer::write(const char *at, size_t size)
 {
     auto remainSize = size;

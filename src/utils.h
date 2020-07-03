@@ -73,6 +73,7 @@ namespace whsutils
 
         MemoryBuffer() : _stored(0), _gcount(0) {}
 
+        void clear();
         size_t write(const char *, size_t);
         size_t read(char *, size_t &);
     };
